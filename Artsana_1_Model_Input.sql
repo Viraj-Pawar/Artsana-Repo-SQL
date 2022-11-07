@@ -5,8 +5,9 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE   PROCEDURE [Test].[Artsana_1_Model Input]
-----EXEC  [Test].[Artsana_1]
+
+ALTER PROCEDURE [Test].[Artsana_1_Model_Input]
+----EXEC  [Test].[Artsana_1_Model_Input]
 AS
 BEGIN
 
@@ -85,14 +86,15 @@ WHERE Qty < 0 OR [Value(in Lakhs)] < 0.00;
 	DROP TABLE IF EXISTS Artsana.Test.Distributor_SKU_Wise_Data
 	SELECT * INTO Artsana.Test.Distributor_SKU_Wise_Data FROM
 	(
-		SELECT Y.*,C.channel AS [Channel Active List],'RSM'+CAST([RSM ID] AS Varchar) +(CASE WHEN Y.Channel = 'KA' THEN '' when  Y.Channel = 'EX' THEN 'E' ELSE LEFT(Zone,1) END)
+		SELECT Y.*,C.channel AS [Channel Active List],'RSM'+CAST([RSM ID] AS Varchar) +(CASE WHEN Y.Channel = 'KA' THEN '' ELSE LEFT([New_Zone],1) END)
 		+Cast([FC Month] AS varchar)+cast([FC Year] as varchar)+Y.Channel AS [Forecast Number],
-		'RSM'+CAST([RSM ID] AS varchar)+(CASE WHEN Y.Channel = 'KA' THEN '' when  Y.Channel = 'EX' THEN 'E' ELSE LEFT(Zone,1) END)
+		'RSM'+CAST([RSM ID] AS varchar)+(CASE WHEN Y.Channel = 'KA' THEN '' ELSE LEFT([New_Zone],1) END)
 		+cast([FC Month]as varchar)+ cast([FC Year]AS varchar)+Y.Channel+'_'+cast([Mapping_Code] as varchar) AS [Key] FROM 
 		(
 			SELECT T.*,P.[RSM ID],Month(GETDATE()) AS [FC Month],Year(GETDATE()) AS [FC Year],(t.[Mapping_Code]+'_'+T.Channel) AS [Active Key]  FROM
 			(
-				SELECT a.*,(CASE WHEN b.[Mapped Code] is null THEN a.[Mat Code] ELSE b.[Mapped Code] END) AS [Mapping_Code], Artsana.dbo.CapitalizeFirstLetter(a.ASM2) AS X,
+				SELECT a.*,(CASE WHEN [Channel Name L1] = 'Export + Others' AND ASM2 = 'ASM-EXPORT/INTI' THEN 'Export' ELSE [Zone] end) as [New_Zone]
+				,(CASE WHEN b.[Mapped Code] is null THEN a.[Mat Code] ELSE b.[Mapped Code] END) AS [Mapping_Code], Artsana.dbo.CapitalizeFirstLetter(a.ASM2) AS X,
 				(CASE WHEN [Channel Name L1] = 'BRAND-E-COM' THEN 'EC'
 				WHEN [Channel Name L1] = 'BT' THEN 'SBT' 
 				WHEN [Channel Name L1] = 'EBO' THEN 'EBO' 
@@ -103,7 +105,9 @@ WHERE Qty < 0 OR [Value(in Lakhs)] < 0.00;
 				AND ASM2 = 'ASM-HOSPITAL' THEN 'HO'   END) AS Channel FROM Artsana.Test.Sales_Data A
 				LEFT JOIN Artsana.test.[Mapping File] b ON a. [Mat Code] = b. [Material Code]
 			)T
-			LEFT JOIN (SELECT DISTINCT [ASM AREA],[RSM ID]  FROM Artsana.Test.[RSM_ID] ) P ON P.[ASM AREA] = T.[USER ID]
+			LEFT JOIN (SELECT DISTINCT [ASM AREA],[RSM ID],[Zone]  FROM Artsana.Test.[RSM_ID] ) P ON 
+			CASE WHEN P.[ASM AREA] = 'EBONORTH' OR P.[ASM AREA] = 'HONORTH' THEN P.[ASM AREA]+P.[Zone] ELSE P.[ASM AREA] END= 
+			CASE WHEN T.[USER ID] = 'EBONORTH' OR T.[USER ID] = 'HONORTH' THEN T.[USER ID]+T.[New_Zone] ELSE T.[USER ID] END
 		)Y
 		LEFT JOIN (SELECT Distinct Key1 , channel from Artsana.Test.Active_Long) c ON Y.[Active Key] = c.Key1
 	)Z
