@@ -7,13 +7,13 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 -----RAW FILES USED
---1) 
+--1) Artsana.test.DOA_RAW
 --2) 
 --3) 
 --4) 
 --5) 
 
-ALTER PROCEDURE [Test].[Artsana_1_FC_Details]
+Create PROCEDURE [Test].[Artsana_1_FC_Details_Base]
 ----EXEC  [Test].[Artsana_1_Model_Input]
 AS
 BEGIN
@@ -122,4 +122,82 @@ VM1,VM2,VM3,VM4,VM5,VM6,VM7,VM8,VM9,VM10,VM11,VM12,VM13,VM14,VM15,VM16,VM17,VM18
 
 ----* for EXCLUDING KA pivot VALUE END
 
+----* for sales data for KA and adding Month seq END
+
+DROP TABLE IF EXISTS  #KA_QTY_ONLY
+SELECT a.*,CAST((CAST(a.[Year] AS VARCHAR)+'-'+CAST(a.[Month] AS VARCHAR)+'-01') AS date) as [Date],b.Month_Seq_Q,b.Month_Seq_V
+INTO #KA_QTY_ONLY FROM Artsana.Test.Artsana_Data_details_base_file_all_channels  a
+LEFT JOIN #Month_seq b ON CAST((CAST(a.[Year] AS VARCHAR)+'-'+CAST(a.[Month] AS VARCHAR)+'-01') AS date) = b.[Date]
+where a.Channel = 'KA'
+
+----* for sales data for KA and adding Month seq END
+
+----* for  KA pivot Quatity START
+
+DROP TABLE IF EXISTS  #KA_WORKING_QTY
+SELECT [key], [Forecast Number], [FC Month],[FC Year],'KA' as Region,Channel,Mapping_Code, Description, Category,RSM,[RSM ID],
+[Material Status],[Domestic/Import],[ABC (Qty)],Category1,
+QM1,QM2,QM3,QM4,QM5,QM6,QM7,QM8,QM9,QM10,QM11,QM12,QM13,QM14,QM15,QM16,QM17,QM18,QM19,QM20,QM21,QM22,QM23,QM24,QM25,QM26,QM27,QM28,QM29,QM30,QM31,QM32,QM33,QM34,QM35,QM36  into #KA_WORKING_QTY
+FROM  
+(SELECT [key], [Forecast Number], [FC Month],[FC Year],Channel,Mapping_Code, Description, Category,RSM,[RSM ID],
+[Material Status],[Domestic/Import],[ABC (Qty)],Category1,Month_Seq_Q, [Qty] FROM #KA_QTY_ONLY) A  
+PIVOT  
+(  
+SUM([Qty]) 
+FOR [Month_Seq_Q] IN (
+QM1,QM2,QM3,QM4,QM5,QM6,QM7,QM8,QM9,QM10,QM11,QM12,QM13,QM14,QM15,QM16,QM17,QM18,QM19,QM20,QM21,QM22,QM23,QM24,QM25,QM26,QM27,QM28,QM29,QM30,QM31,QM32,QM33,QM34,QM35,QM36)
+) B
+
+----* for  KA pivot Quatity END
+
+----* for  KA pivot VALUE START
+
+DROP TABLE IF EXISTS  #KA_WORKING_VALUE
+SELECT [key], [Forecast Number], [FC Month],[FC Year],'KA' as Region,Channel,Mapping_Code, Description, Category,RSM,[RSM ID],
+[Material Status],[Domestic/Import],[ABC (Qty)],Category1,
+VM1,VM2,VM3,VM4,VM5,VM6,VM7,VM8,VM9,VM10,VM11,VM12,VM13,VM14,VM15,VM16,VM17,VM18,VM19,VM20,VM21,VM22,VM23,VM24,VM25,VM26,VM27,VM28,VM29,VM30,VM31,VM32,VM33,VM34,VM35,VM36  into #KA_WORKING_VALUE
+FROM  
+(SELECT [key], [Forecast Number], [FC Month],[FC Year],Channel,Mapping_Code, Description, Category,RSM,[RSM ID],
+[Material Status],[Domestic/Import],[ABC (Qty)],Category1,Month_Seq_V, [Value] FROM #KA_QTY_ONLY) A  
+PIVOT  
+(  
+SUM([Value]) 
+FOR [Month_Seq_V] IN (
+VM1,VM2,VM3,VM4,VM5,VM6,VM7,VM8,VM9,VM10,VM11,VM12,VM13,VM14,VM15,VM16,VM17,VM18,VM19,VM20,VM21,VM22,VM23,VM24,VM25,VM26,VM27,VM28,VM29,VM30,VM31,VM32,VM33,VM34,VM35,VM36)
+) B
+
+----* for  KA pivot VALUE END
+
+----* for All_pivot_data QTY START
+
+DROP TABLE IF EXISTS  #ALL_WORKING_QTY
+SELECT * INTO #ALL_WORKING_QTY FROM (
+SELECT * FROM  #KA_EXCLUDE_WORKING_QTY
+UNION 
+SELECT * FROM #KA_WORKING_QTY)a
+
+----* for All_pivot_data QTY END
+
+----* for All_pivot_data Value START
+
+DROP TABLE IF EXISTS  #ALL_WORKING_Value
+SELECT * INTO #ALL_WORKING_Value FROM (
+SELECT * FROM  #KA_EXCLUDE_WORKING_Value
+UNION 
+SELECT * FROM #KA_WORKING_VALUE)a
+
+----* for All_pivot_data Value END
+
+----* for Updating Forecast number in DOA START
+
+DROP TABLE IF EXISTS  Artsana.test.DOA_Final
+SELECT 'RSM'+CAST([RSM_ID] AS Varchar) +(CASE WHEN Channel = 'KA' THEN '' when  Channel = 'EX' THEN 'E' ELSE LEFT(Region,1) END)
+		+Cast(Month(GETDATE()) AS varchar)+cast(Year(GETDATE()) as varchar)+Channel AS [Forecast Number],Month(GETDATE()) AS [FC Month],Year(GETDATE()) AS [FC Year],
+		RSM,RSM_ID,[RSM UserLoginID],Region,[ZSM Name],[ZSM UserLoginID],[HOD Name],[HOD UserLoginID],[Sales Planning Manager],[Sales Planning UserLoginID],Planner,[Planner UserLoginID],Channel  
+		into Artsana.test.DOA_Final FROM (
+SELECT * FROM Artsana.test.DOA_RAW) a
+
+----* for Updating Forecast number in DOA END
+
 END
+
