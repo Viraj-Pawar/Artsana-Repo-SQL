@@ -252,10 +252,17 @@ SELECT * FROM Artsana.test.DOA_RAW) a
 
 ----* for Updating Forecast number in DOA END
 
+----* for Working Classification START
 
-SELECT A.Category,a.Channel,a.Mapping_Code as [Material_Code],a.[RSM ID],
-QM25,QM26,QM27,QM28,QM29,QM30,QM31,QM32,QM33,QM34,QM35,QM36,VM25,VM26,VM27,VM28,VM29,VM30,VM31,VM32,VM33,VM34,VM35,VM36 FROM Artsana.Test.ALL_WORKING_QTY A
-RIGHT JOIN Artsana.Test.ALL_WORKING_Value B ON A.[key] = b.[key]
+DROP TABLE IF EXISTS  Artsana.Test.Working_classification
+SELECT A.Category,a.Channel,a.Mapping_Code as [Material_Code],a.[RSM ID],c.[ZSM UserLoginID],
+QM25,QM26,QM27,QM28,QM29,QM30,QM31,QM32,QM33,QM34,QM35,QM36,VM25,VM26,VM27,VM28,VM29,VM30,VM31,VM32,VM33,VM34,VM35,VM36 
+INTO Artsana.Test.Working_classification FROM Artsana.Test.ALL_WORKING_QTY A
+INNER JOIN Artsana.Test.ALL_WORKING_Value B ON A.[key] = b.[key]
+INNER JOIN Artsana.test.DOA_Final C ON A.[RSM ID] =c.RSM_ID
+
+----* for Working Classification END
+
 
 END
 
